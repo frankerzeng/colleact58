@@ -5,6 +5,8 @@ import json
 import os
 import time
 from bs4 import BeautifulSoup
+import mysql
+
 
 class collect_dianping():
     configs = [
@@ -28,6 +30,8 @@ class collect_dianping():
                'PHOENIX_ID': '0a01889c-1564e615edf-1e8b2d',
                's_ViewType': '10',
                'JSESSIONID': 'ECEE1D00A48ED96C37E4CBBA8114B8AA'}
+
+    mysql_instance = ''
 
     def collect(self):
         url = self.url
@@ -201,6 +205,12 @@ class collect_dianping():
                 print("success!collect shop:" + shop["shop_id"])
             else:
                 print("failed!collect shop:" + shop["shop_id"])
+
+    def insert(self, data):
+        if type(self.mysql_instance) == str and self.mysql_instance == '':
+            self.mysql_instance = mysql.Dao("localhost", "root", "root", "py58")
+
+        return self.mysql_instance.insert(data)
 
 
 collect_app = collect_dianping()
