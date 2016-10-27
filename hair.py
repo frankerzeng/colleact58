@@ -1,15 +1,19 @@
 # -*- coding:utf-8 -*-
-import codecs
-import requests
 import json
-import os
 import time
+import requests
 from bs4 import BeautifulSoup
 import mysql
+import sys
 
 
-class collect_dianping():
-    configs = [
+class Collect_58:
+    def __init__(self):
+        reload(sys)
+        sys.setdefaultencoding('utf8')
+        pass
+
+    configs_ = [
         # {"province":"上海", "city":"上海", "citycode":"1", "category":"丽人", "categorycode":"50", "kind":"美发", "kindcode":"157", "county":""},
         # {"province":"上海", "city":"上海", "citycode":"1", "category":"丽人", "categorycode":"50", "kind":"美甲", "kindcode":"160", "county":""},
         # {"province":"上海", "city":"上海", "citycode":"1", "category":"丽人", "categorycode":"50", "kind":"美容", "kindcode":"158", "county":""}
@@ -32,56 +36,69 @@ class collect_dianping():
                'JSESSIONID': 'ECEE1D00A48ED96C37E4CBBA8114B8AA'}
 
     mysql_instance = ''
+    configs = [
+        {"provice": "福建", "city": "福州", "city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}
+    ]
+    page = 0
+    url_base = '58.com'
+    query_param = 'PGTID=0d302638-0013-564e-750d-61703e259fcd'
+    url_first_page = ''
 
     def collect(self):
-        url = self.url
         for self.config in self.configs:
-            print(self.config)
-
-            self.url = url + "/" + self.config["citycode"] + "/" + self.config["categorycode"] + "/g" + self.config[
-                "kindcode"] + "o2"
-            print("Page url:" + self.url)
+            url = 'http://' + self.config['city_jp'] + '.' + self.url_base + "/" + self.config["category_qp"] + "/?" + \
+                  self.query_param
+            self.url_first_page = url
+            self.cookies = {}
+            print("第一页:url------>" + url)
             while True:
                 try:
-                    r = requests.get(self.url, headers=self.headers, proxies=self.proxies, cookies=self.cookies,
-                                     timeout=60)
+                    r = requests.get(url, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
                     if r.status_code == 502:
                         time.sleep(5)
                     else:
                         break
-                except:
+                except Exception, e:
+                    print e
                     print("time out!sleep 10...")
                     time.sleep(10)
 
-            (counties, shops, total_page) = self.analyse(r.text)
+            counties = self.get_area(r.text)
+            print("所有地区：------------------------------------------------------------->")
             print(counties)
-            time.sleep(5)
+            time.sleep(2)
             for county in counties:
                 self.config['county'] = county['name']
-                self.collect_county(county)
+                self.collect_url_by_area(county)
 
-    def collect_county(self, county):
-        # url = self.url + county['code']
-        url = "http://www.dianping.com" + county['url']
-        print("Page url:" + url)
+    def collect_url_by_area(self, county):
+        url = self.url_first_page.replace("/" + self.config['category_qp'] + "/", county['url'])
 
-        while True:
+        # 是否有下一页
+        flag = True
+        current_page = 0
+
+        while flag:
+            current_page += 1
+            self.page = current_page
+            url_tmp = url.replace("/" + self.config['category_qp'] + "/",
+                                  "/" + self.config['category_qp'] + "/pn" + str(current_page) + "/")
+            print("按地区 url:" + url_tmp)
+
+            r = ''
             try:
-                r = requests.get(self.url, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
+                time.sleep(5)
+                r = requests.get(url_tmp, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
+
                 if r.status_code == 502:
                     time.sleep(5)
-                else:
-                    break
             except:
                 print("time out!sleep 10...")
                 time.sleep(10)
 
-        (counties, shops, total_page) = self.analyse(r.text)
-        self.save_shops(shops)
-        for i in range(2, total_page + 1):
-            print("Total page:" + str(total_page) + " Current page:" + str(i))
-            time.sleep(5)
-            self.collect_page(url, i)
+            flag = self.has_next_page(r.text)
+
+            self.get_link(r.text)
 
     def collect_page(self, url, page):
         page_url = url + "p" + str(page)
@@ -100,6 +117,62 @@ class collect_dianping():
 
         (counties, shops, total_page) = self.analyse(r.text)
         self.save_shops(shops)
+
+    def get_area(self, text):
+        counties = []
+        soup = BeautifulSoup(text, "html.parser")
+        try:
+            # counties
+            region = soup.find("ul", attrs={'class': 'seljobArea'})
+            county_nodes = region.find_all('a')
+            for county in county_nodes:
+                name = county.string
+                href = county.attrs['href']
+                if href != '/' + self.config['category_qp'] + '/':
+                    counties.append({"name": name, "url": href})  # "code":code})
+        except Exception, e:
+            counties = {}
+            print("counties is empty!")
+            print(e)
+        return counties
+
+    def has_next_page(self, text):
+        soup = BeautifulSoup(text, "html.parser")
+        counties = False
+        try:
+            region = soup.find("div", attrs={'class': 'pagerout'})
+            next_page = region.find("a", attrs={'class': 'next'})
+            if next_page:
+                counties = True
+        except Exception, e:
+            counties = False
+            print("counties is empty!")
+            print(e)
+        return counties
+
+    def get_link(self, text):
+        soup = BeautifulSoup(text, "html.parser")
+
+        try:
+            region = soup.find(id="infolist")
+            dl_all = region.find_all("dl")
+
+            for dl in dl_all:
+                try:
+                    if dl.attrs['id'] == 'jingzhun':
+                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!存在jingzhun标签'
+                        continue
+                except:
+                    print '不存在jingzhun标签'
+                    a_link = dl.find('dt').find('a').attrs['href']
+                    affrows = self.insert_list_link({'link': a_link, 'country': self.config['county'], 'page': self.page})
+
+                    print '============================'
+                    print affrows
+                    print a_link
+        except Exception, e:
+            print("counties is empty!")
+            print(e)
 
     def analyse(self, text):
         counties = []
@@ -199,6 +272,10 @@ class collect_dianping():
             print '------->'
             print url
             print params
+
+            self.insert(params)
+
+            return
             r = requests.post(url, params)
 
             if r.status_code == 200:
@@ -206,12 +283,13 @@ class collect_dianping():
             else:
                 print("failed!collect shop:" + shop["shop_id"])
 
-    def insert(self, data):
+    def insert_list_link(self, data):
         if type(self.mysql_instance) == str and self.mysql_instance == '':
-            self.mysql_instance = mysql.Dao("localhost", "root", "root", "py58")
+            self.mysql_instance = mysql.Dao("localhost", "root", "root", "py58", 'list_link')
 
-        return self.mysql_instance.insert(data)
+        return self.mysql_instance.add(data)
 
 
-collect_app = collect_dianping()
+collect_app = Collect_58()
 collect_app.collect()
+# collect_app.insert_list_link({ "link": "2ww", 'country': 'a','page': 1})
