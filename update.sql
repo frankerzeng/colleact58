@@ -38,6 +38,7 @@ CREATE TABLE `shop_detail`(
     `contact` varchar(30) DEFAULT "" COMMENT "联系人",
     `email` varchar(30) DEFAULT "" COMMENT "电子邮箱",
     `phone` varchar(20) DEFAULT "" COMMENT "联系电话",
+    `phone2` varchar(20) DEFAULT "" COMMENT "联系电话2",
     `qq` varchar(30) DEFAULT "" COMMENT "QQ",
     `addr` varchar(255) DEFAULT "" COMMENT "联系地址",
     `service_area` varchar(255) DEFAULT 0 COMMENT "服务区域",

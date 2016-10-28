@@ -226,6 +226,7 @@ class Collect_58:
                      "contact": "",
                      "email": "",
                      "phone": "",
+                     "phone2": "",
                      "qq": "",
                      "addr": "",
                      "service_area": "",
@@ -256,7 +257,8 @@ class Collect_58:
             li_node[1].span.span.decompose()
             shop_info['contact'] = li_node[1].span.string
             shop_info['email'] = li_node[2].span.string
-            shop_info['phone'] = li_node[4].span.string
+            shop_info['phone'] = li_node[3].span.string
+            shop_info['phone2'] = li_node[4].span.string
             shop_info['qq'] = li_node[5].span.string
             shop_info['addr'] = li_node[6].span.string
             shop_info['service_area'] = li_node[7].span.string
