@@ -6,7 +6,7 @@ class Dao:
     cursor = ''
     tb = ''
 
-    def __init__(self, host, user, pwd, db, tb):
+    def __init__(self, host, user, pwd, db, tb=''):
         self.conn = MySQLdb.connect(host=host, user=user, passwd=pwd, db=db, charset='utf8')
         self.cursor = self.conn.cursor()
         self.tb = tb
@@ -32,6 +32,26 @@ class Dao:
 
         return n
 
+    def mdf(self, condition, data):
+        fields = ''
+        values = []
+
+        for key in data:
+            fields += ',' + key + '=%s'
+            values.append(data[key])
+
+        fields = fields[1:]
+
+        where = ''
+        for k in condition:
+            where += "AND" + k + "='" + condition[k] + "'"
+        where = where[3:]
+
+        sql = "update " + self.tb + " set " + fields + " where " + where
+
+        n = self.cursor.execute(sql, values)
+        return n
+
     def delete(self, condition):
         sql = ''
         sql = "delete from user where name=%s"
@@ -44,3 +64,10 @@ class Dao:
         param = ("ken")
         n = self.cursor.execute(sql, param)
         print n
+
+    def query(self, sql, return_rows=False):
+        num = self.cursor.execute(sql)
+        if return_rows:
+            return self.cursor.fetchall()
+        else:
+            return num

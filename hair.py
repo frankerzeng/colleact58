@@ -9,6 +9,8 @@ import sys
 
 class Collect_58:
     def __init__(self):
+        self.dao_list_link_instance = mysql.Dao("localhost", "root", "root", "py58", 'list_link')
+        self.dao_shop_detail_instance = mysql.Dao("localhost", "root", "root", "py58", 'shop_detail')
         reload(sys)
         sys.setdefaultencoding('utf8')
         pass
@@ -35,7 +37,9 @@ class Collect_58:
                's_ViewType': '10',
                'JSESSIONID': 'ECEE1D00A48ED96C37E4CBBA8114B8AA'}
 
-    mysql_instance = ''
+    dao_list_link_instance = ''
+    dao_shop_detail_instance = ''
+
     configs = [
         {"provice": "福建", "city": "福州", "city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}
     ]
@@ -43,6 +47,8 @@ class Collect_58:
     url_base = '58.com'
     query_param = 'PGTID=0d302638-0013-564e-750d-61703e259fcd'
     url_first_page = ''
+    list_link = ''
+    qy_name = ''
 
     def collect(self):
         for self.config in self.configs:
@@ -51,7 +57,9 @@ class Collect_58:
             self.url_first_page = url
             self.cookies = {}
             print("第一页:url------>" + url)
+            times = 0
             while True:
+                times += 1
                 try:
                     r = requests.get(url, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
                     if r.status_code == 502:
@@ -62,6 +70,8 @@ class Collect_58:
                     print e
                     print("time out!sleep 10...")
                     time.sleep(10)
+                    if times == 3:
+                        break
 
             counties = self.get_area(r.text)
             print("所有地区：------------------------------------------------------------->")
@@ -71,6 +81,7 @@ class Collect_58:
                 self.config['county'] = county['name']
                 self.collect_url_by_area(county)
 
+    # 按地区分页
     def collect_url_by_area(self, county):
         url = self.url_first_page.replace("/" + self.config['category_qp'] + "/", county['url'])
 
@@ -85,39 +96,31 @@ class Collect_58:
                                   "/" + self.config['category_qp'] + "/pn" + str(current_page) + "/")
             print("按地区 url:" + url_tmp)
 
-            r = ''
-            try:
-                time.sleep(5)
-                r = requests.get(url_tmp, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
+            r = {"text": ""}
 
-                if r.status_code == 502:
+            times = 0
+            while True:
+                times += 1
+                try:
                     time.sleep(5)
-            except:
-                print("time out!sleep 10...")
-                time.sleep(10)
+                    r = requests.get(url_tmp, headers=self.headers, proxies=self.proxies, cookies=self.cookies,
+                                     timeout=60)
+                    if r.status_code == 502:
+                        time.sleep(5)
+                    else:
+                        break
+                except Exception, e:
+                    print(e)
+                    print("time out!sleep 10...")
+                    time.sleep(10)
+                    if times == 3:
+                        break
 
             flag = self.has_next_page(r.text)
 
             self.get_link(r.text)
 
-    def collect_page(self, url, page):
-        page_url = url + "p" + str(page)
-        print("Page url:" + page_url)
-
-        while True:
-            try:
-                r = requests.get(self.url, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
-                if r.status_code == 502:
-                    time.sleep(5)
-                else:
-                    break
-            except:
-                print("time out!sleep 10...")
-                time.sleep(10)
-
-        (counties, shops, total_page) = self.analyse(r.text)
-        self.save_shops(shops)
-
+    # 得到全部区域
     def get_area(self, text):
         counties = []
         soup = BeautifulSoup(text, "html.parser")
@@ -150,6 +153,7 @@ class Collect_58:
             print(e)
         return counties
 
+    # 列表页的所有链接
     def get_link(self, text):
         soup = BeautifulSoup(text, "html.parser")
 
@@ -160,136 +164,141 @@ class Collect_58:
             for dl in dl_all:
                 try:
                     if dl.attrs['id'] == 'jingzhun':
-                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!存在jingzhun标签'
-                        continue
+                        print '---------存在jingzhun标签'
                 except:
                     print '不存在jingzhun标签'
-                    a_link = dl.find('dt').find('a').attrs['href']
-                    affrows = self.insert_list_link({'link': a_link, 'country': self.config['county'], 'page': self.page})
+                    a_link = dl.find_all("dd")[1].a
+                    href_str = a_link.attrs['href']
+                    self.qy_name = a_link.string
 
-                    print '============================'
-                    print affrows
-                    print a_link
+                    # 列表信息记录数据库
+                    affrows = self.insert_list_link(
+                        {'link': href_str, 'country': self.config['county'], 'page': self.page, 'name': self.qy_name})
+
+                    self.detail_page(href_str)
         except Exception, e:
-            print("counties is empty!")
             print(e)
-
-    def analyse(self, text):
-        counties = []
-        shops = []
-        total_page = 1
-
-        soup = BeautifulSoup(text, "html.parser")
-
-        try:
-            # counties
-            region = soup.find(id="region-nav")
-            county_nodes = region.find_all('a')
-            for county in county_nodes:
-                name = county.string
-
-                href = county.attrs['href']
-                # p1 = href.find("g" + self.config['kindcode'], 1)
-                # p2 = href.find("#nav", p1)
-                # code = href[p1 + 4:p2 - 2]
-
-                counties.append({"name": name, "url": href})  # "code":code})
-        except:
-            counties = {}
             print("counties is empty!")
 
+    # 列表链接的详情页
+    def detail_page(self, link):
+        r = {"text": ""}
+        times = 0
+        while True:
+            times += 1
+            try:
+                r = requests.get(link, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
+                if r.status_code == 502:
+                    time.sleep(5)
+                else:
+                    break
+            except Exception, e:
+                print(e)
+                print("time out!sleep 10...")
+                time.sleep(10)
+                if times == 3:
+                    break
+        self.list_link = link
+        self.get_qy_link(r.text)
+
+    def get_qy_link(self, text):
+        soup = BeautifulSoup(text, "html.parser")
         try:
-            # total_page
-            page = soup.find("div", attrs={'class': 'page'})
-            page_nodes = page.find_all('a')
-            for page in page_nodes:
-                try:
-                    page_num = int(page.string)
-                except:
-                    page_num = 1
-                if page_num > total_page:
-                    total_page = page_num
-        except:
-            total_page = 0
-            print("total_page is empty!")
+            ul_node = soup.find("ul", attrs={'class': 'basicMsgList'})
+            li_node = ul_node.find_all('li')[5]
+            qy_link = li_node.a.attrs['href']
+            affrows = self.update_list_link({"link": self.list_link}, {"qy_link": qy_link})
+            qy_exist_num = self.query_shop_detail(
+                'select * from ' + self.dao_shop_detail_instance.tb + ' where qy_link="' + qy_link + '"')
+            if qy_exist_num == 0:
+                shop_info = self.shop_info(qy_link)
+                affrows_shop_detail = self.insert_shop_detail(shop_info)
 
-        # shops
-        # shop_list = soup.find(class_="shop-list J_shop-list shop-all-list")
-        # shop_list_ul = shop_list.find("ul")
+        except Exception, e:
+            print '方法 get_qy_link-------------------->'
+            print e
 
-        # fo = codecs.open("shops.txt", "w+", "utf-8")
-        # fo.write(str(shop_list_ul))
-        # fo.close()
+    # 企业网站，信息收集
+    def shop_info(self, qy_link):
 
-        shop_nodes = soup.find_all(name='a', attrs={'class': 'o-map J_o-map'})
-        for shop in shop_nodes:
-            # print(shop)
+        shop_info = {"qy_link": qy_link,
+                     "name": self.qy_name,
+                     "contact": "",
+                     "email": "",
+                     "phone": "",
+                     "qq": "",
+                     "addr": "",
+                     "service_area": "",
+                     }
+        r = {"text": ''}
+        times = 0
+        while True:
+            times += 1
             try:
-                # o_map_node = shop.find("a", attrs={'class':'o-map J_o-map'})
-                shop_id = shop.attrs['data-shopid']
-                shop_name = shop.attrs['data-sname']
-                shop_address = shop.attrs['data-address']
+                r = requests.get(qy_link, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
+                if r.status_code == 502:
+                    time.sleep(5)
+                else:
+                    break
+            except Exception, e:
+                print(e)
+                print("shop_info-----time out!sleep 10..." + qy_link)
+                time.sleep(10)
+                if times == 3:
+                    break
 
-                # comment_node = shop.find("div", attrs={'class':'comment'})
-                # rank_node = comment_node.find("span")
-                # shop_rank = rank_node.attrs["title"]
-                shop_rank = ""
-            except:
-                print("not valid shop!")
-                continue
+        soup = BeautifulSoup(r.text, "html.parser")
+        # http://t5838318501786625.5858.com/
+        try:
+            div_node = soup.find(id='first-zone')
+            div_node = div_node.find("div", attrs={'class': 'mod-box'})
+            li_node = div_node.find_all('li')
+            li_node[1].span.span.decompose()
+            shop_info['contact'] = li_node[1].span.string
+            shop_info['email'] = li_node[2].span.string
+            shop_info['phone'] = li_node[4].span.string
+            shop_info['qq'] = li_node[5].span.string
+            shop_info['addr'] = li_node[6].span.string
+            shop_info['service_area'] = li_node[7].span.string
+            return shop_info
+        except Exception, e:
+            print '方法 get_qy_link1-------------------->' + qy_link
+            print e
 
+        # http://qy.58.com/19726492508935/
+        try:
+            ul_node = soup.find("ul", attrs={"class": "basicMsgList"})
+            li_node = ul_node.find_all('li')
+
+            li_node[1].span.decompose()
+            li_node[3].span.decompose()
+            shop_info['contact'] = li_node[1].string
             try:
-                review_node = comment_node.find("a", attrs={'class': 'review-num'})
-                review_num_node = review_node.find("b")
-                shop_review_num = int(review_num_node.string)
-
-                comment_list_node = shop.find("span", attrs={'class': 'comment-list'})
-                comments_node = comment_list_node.find_all("b")
-                shop_comment_effect = comments_node[0].string
-                shop_comment_circumstance = comments_node[1].string
-                shop_comment_service = comments_node[2].string
+                shop_info['phone'] = li_node[3].img.attrs['src']
             except:
-                shop_review_num = 0
-                shop_comment_effect = "0.0"
-                shop_comment_circumstance = "0.0"
-                shop_comment_service = "0.0"
+                print ''
+            shop_info['addr'] = li_node[7].var.string
 
-            shop_json = {'category': self.config['category'], 'kind': self.config['kind'], 'city': self.config['city'],
-                         'province': self.config['province'],
-                         'county': self.config['county'], 'address': shop_address, 'name': shop_name,
-                         'shop_id': shop_id, 'rank': shop_rank,
-                         'reviews_num': shop_review_num, 'comment_effect': shop_comment_effect,
-                         'comment_circumstance': shop_comment_circumstance,
-                         'comment_service': shop_comment_service, 'source': 1}
-            shops.append(shop_json)
-
-        return (counties, shops, total_page)
-
-    def save_shops(self, shops):
-        url = "http://api2.zhangsl.hair.uap26.91.com/sdianpingshopss"
-        for index, shop in enumerate(shops):
-            params = json.dumps(shop)
-            print '------->'
-            print url
-            print params
-
-            self.insert(params)
-
-            return
-            r = requests.post(url, params)
-
-            if r.status_code == 200:
-                print("success!collect shop:" + shop["shop_id"])
-            else:
-                print("failed!collect shop:" + shop["shop_id"])
+            return shop_info
+        except Exception, e:
+            print '方法 get_qy_link2-------------------->' + qy_link
+            print e
 
     def insert_list_link(self, data):
-        if type(self.mysql_instance) == str and self.mysql_instance == '':
-            self.mysql_instance = mysql.Dao("localhost", "root", "root", "py58", 'list_link')
+        return self.dao_list_link_instance.add(data)
 
-        return self.mysql_instance.add(data)
+    def update_list_link(self, condition, data):
+        return self.dao_list_link_instance.mdf(condition, data)
+
+    def query_shop_detail(self, sql, return_rows=False):
+        return self.dao_shop_detail_instance.query(sql, return_rows)
+
+    def update_shop_detail(self, condition, data):
+        return self.dao_shop_detail_instance.mdf(condition, data)
+
+    def insert_shop_detail(self, data):
+        return self.dao_shop_detail_instance.add(data)
 
 
 collect_app = Collect_58()
 collect_app.collect()
-# collect_app.insert_list_link({ "link": "2ww", 'country': 'a','page': 1})
