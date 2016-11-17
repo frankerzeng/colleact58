@@ -56,12 +56,29 @@ class Collect_58:
                     break
             except Exception, e:
                 self.print_exception(sys._getframe().f_code.co_name, e)
-        print self.configs
 
         # 莫名的乱码
-        text = r.text.decode(r.encoding).encode('UTF-8')
+        soup = BeautifulSoup(r.text.decode('UTF-8').encode(r.encoding), "html.parser")
+        print r.text.decode('UTF-8').encode(r.encoding)
+        try:
+            dl = soup.find(id="clist")
+            dl.find('dd', attrs={'class': 'dot'}).decompose()
+            dd = dl.find_all('dd')
+            for d in dd:
+                print d
+            time.sleep(100)
 
-        time.sleep(2)
+            region = soup.find("ul", attrs={'class': 'seljobArea'})
+            county_nodes = region.find_all('a')
+            for county in county_nodes:
+                name = county.string
+                href = county.attrs['href']
+                if href != '/' + self.config['category_qp'] + '/':
+                    region.append({"name": name, "url": href})  # "code":code})
+        except Exception, e:
+            self.print_exception(sys._getframe().f_code.co_name, e)
+
+        return ''
 
     def print_exception(self, name, e):
         print name + '----------------error'
