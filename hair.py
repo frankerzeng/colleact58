@@ -8,22 +8,16 @@ import sys
 
 
 class Collect_58:
-    def __init__(self):
+    def __init__(self, data=[{"city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}]):
         self.dao_list_link_instance = mysql.Dao("localhost", "root", "root", "py58", 'list_link')
         self.dao_shop_detail_instance = mysql.Dao("localhost", "root", "root", "py58", 'shop_detail')
+        self.configs = data
+        print sys.getdefaultencoding()
         reload(sys)
         sys.setdefaultencoding('utf8')
+        print sys.getdefaultencoding()
         pass
 
-    configs_ = [
-        # {"province":"上海", "city":"上海", "citycode":"1", "category":"丽人", "categorycode":"50", "kind":"美发", "kindcode":"157", "county":""},
-        # {"province":"上海", "city":"上海", "citycode":"1", "category":"丽人", "categorycode":"50", "kind":"美甲", "kindcode":"160", "county":""},
-        # {"province":"上海", "city":"上海", "citycode":"1", "category":"丽人", "categorycode":"50", "kind":"美容", "kindcode":"158", "county":""}
-        {"province": "上海", "city": "上海", "citycode": "1", "category": "丽人", "categorycode": "50", "kind": "化妆品",
-         "kindcode": "123", "county": ""}
-    ]
-    config = {}
-    url = "http://www.dianping.com/search/category"
     headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                'Accept-Encoding': 'gzip, deflate, sdch',
                'Accept-Language': 'zh-CN,zh;q=0.8',
@@ -40,15 +34,38 @@ class Collect_58:
     dao_list_link_instance = ''
     dao_shop_detail_instance = ''
 
-    configs = [
-        {"provice": "福建", "city": "福州", "city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}
-    ]
+    configs = [{"provice": "福建", "city": "福州", "city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}]
+    config = {}
+
     page = 0
     url_base = '58.com'
+    url_all_city = 'http://www.58.com/zpmeirongdaoshi/changecity/'
     query_param = 'PGTID=0d302638-0013-564e-750d-61703e259fcd'
     url_first_page = ''
     list_link = ''
     qy_name = ''
+
+    def all_city(self):
+        r = {}
+        while True:
+            try:
+                r = requests.get(self.url_all_city, headers=self.headers, proxies=self.proxies, cookies={}, timeout=60)
+                if r.status_code == 502:
+                    time.sleep(5)
+                else:
+                    break
+            except Exception, e:
+                self.print_exception(sys._getframe().f_code.co_name, e)
+        print self.configs
+
+        # 莫名的乱码
+        text = r.text.decode(r.encoding).encode('UTF-8')
+
+        time.sleep(2)
+
+    def print_exception(self, name, e):
+        print name + '----------------error'
+        print e
 
     def collect(self):
         for self.config in self.configs:
@@ -73,18 +90,26 @@ class Collect_58:
                     if times == 3:
                         break
 
+            print r.text
+            time.sleep(1000)
             counties = self.get_area(r.text)
             print("所有地区：------------------------------------------------------------->")
             print(counties)
             time.sleep(2)
             for county in counties:
-                self.config['county'] = county['name']
-                self.collect_url_by_area(county)
+                if url.find(county['url']) == -1:
+                    self.config['county'] = county['name']
+                    self.collect_url_by_area(county)
 
     # 按地区分页
     def collect_url_by_area(self, county):
-        url = self.url_first_page.replace("/" + self.config['category_qp'] + "/", county['url'])
+        if county['url'].find("58.com") == -1:
+            url = self.url_first_page.replace("/" + self.config['category_qp'] + "/", county['url'])
+        else:
+            url = county['url']
 
+        print ';;;;;;;;;;;;;'
+        print url
         # 是否有下一页
         flag = True
         current_page = 0
@@ -301,6 +326,5 @@ class Collect_58:
     def insert_shop_detail(self, data):
         return self.dao_shop_detail_instance.add(data)
 
-
-collect_app = Collect_58()
-collect_app.collect()
+# collect_app = Collect_58()
+# collect_app.collect()
