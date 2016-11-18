@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+import random
 import sys
 import time
 import requests
@@ -79,7 +80,6 @@ class Collect_58:
     # 得到全部职位
     def all_categorys(self):
         r = {}
-        print self.url_all_categorys
         while True:
             try:
                 r = requests.get(self.url_all_categorys, headers=self.headers)
@@ -106,11 +106,19 @@ class Collect_58:
         except Exception, e:
             self.print_exception(sys._getframe().f_code.co_name, e)
 
-    def print_exception(self, name, e):
+    def print_exception(self, name, e, sec=0):
+        if sec != 0:
+            time.sleep(3)
         print name + '----------------error'
         print e
 
     def collect(self):
+        self.config = self.configs
+        time.sleep(random.randint(1, 3))
+
+        print self.config
+        return
+
         self.config = self.configs
         url = 'http://' + self.config['city_jp'] + '.' + self.url_base + "/" + self.config["category_qp"] + "/?" + \
               self.query_param
@@ -127,14 +135,10 @@ class Collect_58:
                 else:
                     break
             except Exception, e:
-                print e
-                print("time out!sleep 10...")
-                time.sleep(10)
+                self.print_exception(sys._getframe().f_code.co_name, e)
                 if times == 3:
                     break
 
-        print r.text
-        time.sleep(1000)
         counties = self.get_area(r.text)
         print("所有地区：------------------------------------------------------------->")
         print(counties)
@@ -151,8 +155,8 @@ class Collect_58:
         else:
             url = county['url']
 
-        print ';;;;;;;;;;;;;'
-        print url
+        print '按地区分页采集------->' + url
+
         # 是否有下一页
         flag = True
         current_page = 0
@@ -162,7 +166,6 @@ class Collect_58:
             self.page = current_page
             url_tmp = url.replace("/" + self.config['category_qp'] + "/",
                                   "/" + self.config['category_qp'] + "/pn" + str(current_page) + "/")
-            print("按地区 url:" + url_tmp)
 
             r = {"text": ""}
 
@@ -170,7 +173,6 @@ class Collect_58:
             while True:
                 times += 1
                 try:
-                    time.sleep(5)
                     r = requests.get(url_tmp, headers=self.headers, proxies=self.proxies, cookies=self.cookies,
                                      timeout=60)
                     if r.status_code == 502:
@@ -178,9 +180,7 @@ class Collect_58:
                     else:
                         break
                 except Exception, e:
-                    print(e)
-                    print("time out!sleep 10...")
-                    time.sleep(10)
+                    self.print_exception(sys._getframe().f_code.co_name, e)
                     if times == 3:
                         break
 
@@ -217,8 +217,8 @@ class Collect_58:
                 counties = True
         except Exception, e:
             counties = False
-            print("counties is empty!")
-            print(e)
+            self.print_exception(sys._getframe().f_code.co_name, e, 0)
+
         return counties
 
     # 列表页的所有链接
@@ -227,31 +227,28 @@ class Collect_58:
 
         try:
             region = soup.find(id="infolist")
+            if region.find_all(id="jingzhun"):
+                region.find_all(id="jingzhun").decompose()
+
             dl_all = region.find_all("dl")
 
             for dl in dl_all:
-                try:
-                    if dl.attrs['id'] == 'jingzhun':
-                        print '---------存在jingzhun标签'
-                except:
-                    print '不存在jingzhun标签'
-                    a_link = dl.find_all("dd")[1].a
-                    href_str = a_link.attrs['href']
-                    self.qy_name = a_link.string
+                a_link = dl.find_all("dd")[1].a
+                href_str = a_link.attrs['href']
+                self.qy_name = a_link.string
 
-                    # 列表信息记录数据库
-                    affrows = self.insert_list_link(
-                        {'link': href_str, 'country': self.config['county'], 'page': self.page, 'name': self.qy_name})
+                affrows = self.insert_list_link(
+                    {'link': href_str, 'country': self.config['county'], 'page': self.page, 'name': self.qy_name})
 
-                    self.detail_page(href_str)
+                self.detail_page(href_str)
         except Exception, e:
-            print(e)
-            print("counties is empty!")
+            self.print_exception(sys._getframe().f_code.co_name, e, 0)
 
     # 列表链接的详情页
     def detail_page(self, link):
         r = {"text": ""}
         times = 0
+        print '链接详情页------->' + link
         while True:
             times += 1
             try:
@@ -261,16 +258,11 @@ class Collect_58:
                 else:
                     break
             except Exception, e:
-                print(e)
-                print("time out!sleep 10...")
-                time.sleep(10)
+                self.print_exception(sys._getframe().f_code.co_name, e)
                 if times == 3:
                     break
         self.list_link = link
-        self.get_qy_link(r.text)
-
-    def get_qy_link(self, text):
-        soup = BeautifulSoup(text, "html.parser")
+        soup = BeautifulSoup(r.text, "html.parser")
         try:
             ul_node = soup.find("ul", attrs={'class': 'basicMsgList'})
             li_node = ul_node.find_all('li')[5]
@@ -280,20 +272,23 @@ class Collect_58:
                 'select * from ' + self.dao_shop_detail_instance.tb + ' where qy_link="' + qy_link + '"')
             if qy_exist_num == 0:
                 shop_info = self.shop_info(qy_link)
+                for info in shop_info:
+                    shop_info[info] = shop_info[info].strip()
                 affrows_shop_detail = self.insert_shop_detail(shop_info)
 
         except Exception, e:
-            print '方法 get_qy_link-------------------->'
-            print e
+            self.print_exception(sys._getframe().f_code.co_name, e, 0)
 
     # 企业网站，信息收集
     def shop_info(self, qy_link):
 
         shop_info = {"qy_link": qy_link,
                      "name": self.qy_name,
+                     "city": self.config['city'],
+                     "area": self.config['county'],
                      "contact": "",
                      "email": "",
-                     "phone": "",
+                     "phone1": "",
                      "phone2": "",
                      "qq": "",
                      "addr": "",
@@ -310,9 +305,7 @@ class Collect_58:
                 else:
                     break
             except Exception, e:
-                print(e)
-                print("shop_info-----time out!sleep 10..." + qy_link)
-                time.sleep(10)
+                self.print_exception(sys._getframe().f_code.co_name, e)
                 if times == 3:
                     break
 
@@ -325,15 +318,14 @@ class Collect_58:
             li_node[1].span.span.decompose()
             shop_info['contact'] = li_node[1].span.string
             shop_info['email'] = li_node[2].span.string
-            shop_info['phone'] = li_node[3].span.string
+            shop_info['phone1'] = li_node[3].span.string
             shop_info['phone2'] = li_node[4].span.string
             shop_info['qq'] = li_node[5].span.string
             shop_info['addr'] = li_node[6].span.string
             shop_info['service_area'] = li_node[7].span.string
             return shop_info
         except Exception, e:
-            print '方法 get_qy_link1-------------------->' + qy_link
-            print e
+            self.print_exception(sys._getframe().f_code.co_name, e, 0)
 
         # http://qy.58.com/19726492508935/
         try:
@@ -344,15 +336,14 @@ class Collect_58:
             li_node[3].span.decompose()
             shop_info['contact'] = li_node[1].string
             try:
-                shop_info['phone'] = li_node[3].img.attrs['src']
+                shop_info['phone1'] = li_node[3].img.attrs['src']
             except:
                 print ''
             shop_info['addr'] = li_node[7].var.string
 
             return shop_info
         except Exception, e:
-            print '方法 get_qy_link2-------------------->' + qy_link
-            print e
+            self.print_exception(sys._getframe().f_code.co_name, e, 0)
 
     def insert_list_link(self, data):
         return self.dao_list_link_instance.add(data)
@@ -375,5 +366,7 @@ class Collect_58:
     def insert_category(self, data):
         return self.dao_category_instance.add(data)
 
-# collect_app = Collect_58()
-# collect_app.collect()
+
+if __name__ == '__name__':
+    collect_app = Collect_58()
+    collect_app.collect()

@@ -20,30 +20,32 @@ class consumer_hair(threading.Thread):
             else:
                 msg = q.get()
                 hjson = json.loads(msg)
-                collect = Collect_58()
-                collect.configs = {"city": hjson['city'], 'city_jp': hjson['city_jp'],
-                                   'category': hjson['category_name'], 'category_qp': hjson['category']}
-                print collect.configs
-                time.sleep(1111)
-                function_name = ''
+                collect_class = Collect_58()
+                collect_class.configs = {"city": hjson['city'], 'city_jp': hjson['city_jp'],
+                                         'category': hjson['category_name'], 'category_qp': hjson['category']}
 
-                eval('printt.' + function_name)()
-                print self.name + ' ' + 'consumer1' + function_name + ' ' + 'Queue Size:' + str(q.qsize())
+                eval('collect_class.collect')()
+                print self.name + ' ' + 'consumer1' + 'collect_class.collect' + ' ' + 'Queue Size:' + str(q.qsize())
+                print collect_class.configs
             time.sleep(2)
 
 
-def start(i=1):
-    for ii in range(1):
-        c = consumer_hair(1)
+# num 同时执行的进程数
+def start(num=1):
+    for ii in range(num):
+        c = consumer_hair(ii)
+        print 1000
         c.start()
 
 
-def queue(function):
+def queue(param):
     while True:
-        if q.qsize() > 3:
-            time.sleep(2)
+        if q.qsize() > 10:
+            print 11
+            time.sleep(10)
         else:
-            q.put(str(function))
+            print 22
+            q.put(param)
             break
 
 
