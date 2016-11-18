@@ -7,12 +7,11 @@ from lib import mysql
 
 
 class Collect_58:
-    def __init__(self, data=[{"city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}]):
+    def __init__(self):
         self.dao_list_link_instance = mysql.Dao("localhost", "root", "root", "py58", 'list_link')
         self.dao_shop_detail_instance = mysql.Dao("localhost", "root", "root", "py58", 'shop_detail')
         self.dao_city_instance = mysql.Dao("localhost", "root", "root", "py58", 'city')
         self.dao_category_instance = mysql.Dao("localhost", "root", "root", "py58", 'category')
-        self.configs = data
         reload(sys)
         sys.setdefaultencoding('utf8')
         pass
@@ -35,13 +34,13 @@ class Collect_58:
     dao_city_instance = ''
     dao_category_instance = ''
 
-    configs = [{"provice": "福建", "city": "福州", "city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}]
+    configs = {"provice": "福建", "city": "福州", "city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}
     config = {}
 
     page = 0
     url_base = '58.com'
     url_all_city = 'http://www.58.com/zpmeirongdaoshi/changecity/'
-    url_all_categorys = 'http://fz.58.com/faxingshi/?PGTID=0d3098c2-0013-0ff0-6a39-f751b4c0da3a&ClickID=1'
+    url_all_categorys = 'http://fz.58.com/meirongjianshen?PGTID=0d30366d-0013-029a-2c18-e287e493ea07&ClickID=4'
     query_param = 'PGTID=0d302638-0013-564e-750d-61703e259fcd'
     url_first_page = ''
     list_link = ''
@@ -52,7 +51,7 @@ class Collect_58:
         r = {}
         while True:
             try:
-                r = requests.get(self.url_all_city, headers=self.headers, proxies=self.proxies, cookies={}, timeout=60)
+                r = requests.get(self.url_all_city, headers=self.headers)
                 if r.status_code == 502:
                     time.sleep(5)
                 else:
@@ -83,8 +82,7 @@ class Collect_58:
         print self.url_all_categorys
         while True:
             try:
-                r = requests.get(self.url_all_categorys, headers=self.headers, proxies=self.proxies, cookies={},
-                                 timeout=60)
+                r = requests.get(self.url_all_categorys, headers=self.headers)
                 if r.status_code == 502:
                     time.sleep(5)
                 else:
@@ -102,6 +100,7 @@ class Collect_58:
             for l in li:
                 category_name = l.a.string
                 category = l.a.attrs['href']
+                category = category[category.find('58.com/') + 7:]
                 num = num + self.insert_category({'category': category, 'category_name': category_name})
             print "全部职位" + str(num)
         except Exception, e:
@@ -112,38 +111,38 @@ class Collect_58:
         print e
 
     def collect(self):
-        for self.config in self.configs:
-            url = 'http://' + self.config['city_jp'] + '.' + self.url_base + "/" + self.config["category_qp"] + "/?" + \
-                  self.query_param
-            self.url_first_page = url
-            self.cookies = {}
-            print("第一页:url------>" + url)
-            times = 0
-            while True:
-                times += 1
-                try:
-                    r = requests.get(url, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
-                    if r.status_code == 502:
-                        time.sleep(5)
-                    else:
-                        break
-                except Exception, e:
-                    print e
-                    print("time out!sleep 10...")
-                    time.sleep(10)
-                    if times == 3:
-                        break
+        self.config = self.configs
+        url = 'http://' + self.config['city_jp'] + '.' + self.url_base + "/" + self.config["category_qp"] + "/?" + \
+              self.query_param
+        self.url_first_page = url
+        self.cookies = {}
+        print("第一页:url------>" + url)
+        times = 0
+        while True:
+            times += 1
+            try:
+                r = requests.get(url, headers=self.headers, proxies=self.proxies, cookies=self.cookies, timeout=60)
+                if r.status_code == 502:
+                    time.sleep(5)
+                else:
+                    break
+            except Exception, e:
+                print e
+                print("time out!sleep 10...")
+                time.sleep(10)
+                if times == 3:
+                    break
 
-            print r.text
-            time.sleep(1000)
-            counties = self.get_area(r.text)
-            print("所有地区：------------------------------------------------------------->")
-            print(counties)
-            time.sleep(2)
-            for county in counties:
-                if url.find(county['url']) == -1:
-                    self.config['county'] = county['name']
-                    self.collect_url_by_area(county)
+        print r.text
+        time.sleep(1000)
+        counties = self.get_area(r.text)
+        print("所有地区：------------------------------------------------------------->")
+        print(counties)
+        time.sleep(2)
+        for county in counties:
+            if url.find(county['url']) == -1:
+                self.config['county'] = county['name']
+                self.collect_url_by_area(county)
 
     # 按地区分页
     def collect_url_by_area(self, county):
