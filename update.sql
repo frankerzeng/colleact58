@@ -52,6 +52,7 @@ DROP TABLE IF EXISTS city;
 CREATE TABLE `city`(
     `ID` bigint(11) unsigned NOT NULL AUTO_INCREMENT,
     `city` varchar(255) DEFAULT "" COMMENT "城市",
+    `city_jp` varchar(255) DEFAULT "" COMMENT "城市简拼",
     `status` tinyint(3) DEFAULT 0 COMMENT "状态0：未采集，1：已采集",
     PRIMARY KEY (`ID`)
 )COMMENT "商家详情";

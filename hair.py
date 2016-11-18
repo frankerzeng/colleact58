@@ -1,21 +1,19 @@
 # -*- coding:utf-8 -*-
-import json
+import sys
 import time
 import requests
 from bs4 import BeautifulSoup
-import mysql
-import sys
+from lib import mysql
 
 
 class Collect_58:
     def __init__(self, data=[{"city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}]):
         self.dao_list_link_instance = mysql.Dao("localhost", "root", "root", "py58", 'list_link')
         self.dao_shop_detail_instance = mysql.Dao("localhost", "root", "root", "py58", 'shop_detail')
+        self.dao_city_instance = mysql.Dao("localhost", "root", "root", "py58", 'city')
         self.configs = data
-        print sys.getdefaultencoding()
         reload(sys)
         sys.setdefaultencoding('utf8')
-        print sys.getdefaultencoding()
         pass
 
     headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -33,6 +31,7 @@ class Collect_58:
 
     dao_list_link_instance = ''
     dao_shop_detail_instance = ''
+    dao_city_instance = ''
 
     configs = [{"provice": "福建", "city": "福州", "city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}]
     config = {}
@@ -45,6 +44,7 @@ class Collect_58:
     list_link = ''
     qy_name = ''
 
+    # 得到全国城市
     def all_city(self):
         r = {}
         while True:
@@ -59,26 +59,20 @@ class Collect_58:
 
         # 莫名的乱码
         soup = BeautifulSoup(r.text.decode('UTF-8').encode(r.encoding), "html.parser")
-        print r.text.decode('UTF-8').encode(r.encoding)
         try:
             dl = soup.find(id="clist")
             dl.find('dd', attrs={'class': 'dot'}).decompose()
             dd = dl.find_all('dd')
+            num = 0
             for d in dd:
-                print d
-            time.sleep(100)
-
-            region = soup.find("ul", attrs={'class': 'seljobArea'})
-            county_nodes = region.find_all('a')
-            for county in county_nodes:
-                name = county.string
-                href = county.attrs['href']
-                if href != '/' + self.config['category_qp'] + '/':
-                    region.append({"name": name, "url": href})  # "code":code})
+                aa = d.find_all('a')
+                for a in aa:
+                    jp = a.attrs['href'][a.attrs['href'].find('://') + 3:a.attrs['href'].find('.58.com')]
+                    city = a.string
+                    num = num + self.insert_city({'city_jp': jp, 'city': city})
+            print "全国城市" + str(num)
         except Exception, e:
             self.print_exception(sys._getframe().f_code.co_name, e)
-
-        return ''
 
     def print_exception(self, name, e):
         print name + '----------------error'
@@ -342,6 +336,9 @@ class Collect_58:
 
     def insert_shop_detail(self, data):
         return self.dao_shop_detail_instance.add(data)
+
+    def insert_city(self, data):
+        return self.dao_city_instance.add(data)
 
 # collect_app = Collect_58()
 # collect_app.collect()
