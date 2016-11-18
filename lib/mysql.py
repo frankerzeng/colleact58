@@ -29,6 +29,7 @@ class Dao:
 
         sql = "insert into " + self.tb + "(" + fields + ") values(" + values_fields + ")"
         n = self.cursor.execute(sql, values)
+        self.conn.commit()
 
         return n
 

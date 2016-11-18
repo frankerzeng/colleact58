@@ -1,6 +1,9 @@
+# -*- coding:utf-8 -*-
 import Queue
 import time
 import threading
+import attr
+import json
 
 q = Queue.Queue()
 
@@ -53,5 +56,50 @@ def test():
         c.start()
 
 
+class consumer_hair(threading.Thread):
+    def __init__(self, i):
+        threading.Thread.__init__(self, name="consumer1 Thread-%d" % i)
+
+    def run(self):
+        global q
+        while True:
+            if q.qsize() < 1:
+                pass
+            else:
+                msg = q.get()
+                hjson = json.loads(msg)
+                function_name = hjson['function_name']
+                params = hjson['params']
+                printt = print1()
+                printt.str = params['1']
+                eval('printt.' + function_name)()
+                print self.name + ' ' + 'consumer1' + function_name + ' ' + 'Queue Size:' + str(q.qsize())
+            time.sleep(2)
+
+
+def start():
+    c = consumer_hair(1)
+    c.start()
+
+
+class print1():
+    str = '[['
+
+    def print_fun(self):
+        print self.str
+
+
+def queue(function):
+    while True:
+        if q.qsize() > 3:
+            time.sleep(2)
+        else:
+            q.put(str(function))
+            break
+
+
 if __name__ == '__main__':
-    test()
+    # test()
+    start()
+    for i in range(10):
+        queue('{"function_name":"print_fun","params":{"1":"3"}}')

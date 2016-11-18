@@ -11,6 +11,7 @@ class Collect_58:
         self.dao_list_link_instance = mysql.Dao("localhost", "root", "root", "py58", 'list_link')
         self.dao_shop_detail_instance = mysql.Dao("localhost", "root", "root", "py58", 'shop_detail')
         self.dao_city_instance = mysql.Dao("localhost", "root", "root", "py58", 'city')
+        self.dao_category_instance = mysql.Dao("localhost", "root", "root", "py58", 'category')
         self.configs = data
         reload(sys)
         sys.setdefaultencoding('utf8')
@@ -32,6 +33,7 @@ class Collect_58:
     dao_list_link_instance = ''
     dao_shop_detail_instance = ''
     dao_city_instance = ''
+    dao_category_instance = ''
 
     configs = [{"provice": "福建", "city": "福州", "city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}]
     config = {}
@@ -39,6 +41,7 @@ class Collect_58:
     page = 0
     url_base = '58.com'
     url_all_city = 'http://www.58.com/zpmeirongdaoshi/changecity/'
+    url_all_categorys = 'http://fz.58.com/faxingshi/?PGTID=0d3098c2-0013-0ff0-6a39-f751b4c0da3a&ClickID=1'
     query_param = 'PGTID=0d302638-0013-564e-750d-61703e259fcd'
     url_first_page = ''
     list_link = ''
@@ -71,6 +74,36 @@ class Collect_58:
                     city = a.string
                     num = num + self.insert_city({'city_jp': jp, 'city': city})
             print "全国城市" + str(num)
+        except Exception, e:
+            self.print_exception(sys._getframe().f_code.co_name, e)
+
+    # 得到全部职位
+    def all_categorys(self):
+        r = {}
+        print self.url_all_categorys
+        while True:
+            try:
+                r = requests.get(self.url_all_categorys, headers=self.headers, proxies=self.proxies, cookies={},
+                                 timeout=60)
+                if r.status_code == 502:
+                    time.sleep(5)
+                else:
+                    break
+            except Exception, e:
+                self.print_exception(sys._getframe().f_code.co_name, e)
+
+        # 莫名的乱码
+        soup = BeautifulSoup(r.text, "html.parser")
+        try:
+            ul = soup.find('ul', attrs={'class': 'seljobCate'})
+            ul.li.decompose()
+            li = ul.find_all('li')
+            num = 0
+            for l in li:
+                category_name = l.a.string
+                category = l.a.attrs['href']
+                num = num + self.insert_category({'category': category, 'category_name': category_name})
+            print "全部职位" + str(num)
         except Exception, e:
             self.print_exception(sys._getframe().f_code.co_name, e)
 
@@ -339,6 +372,9 @@ class Collect_58:
 
     def insert_city(self, data):
         return self.dao_city_instance.add(data)
+
+    def insert_category(self, data):
+        return self.dao_category_instance.add(data)
 
 # collect_app = Collect_58()
 # collect_app.collect()
