@@ -16,6 +16,7 @@ CREATE TABLE `shop_detail`(
     `ID` bigint(11) unsigned NOT NULL AUTO_INCREMENT,
     `city` varchar(255) DEFAULT "" COMMENT "城市",
     `area` varchar(255) DEFAULT "" COMMENT "区域",
+    `category` varchar(255) DEFAULT "" COMMENT "职位",
     `name` varchar(255) DEFAULT "" COMMENT "商家名称",
     `contact` varchar(30) DEFAULT "" COMMENT "联系人",
     `email` varchar(30) DEFAULT "" COMMENT "电子邮箱",

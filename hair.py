@@ -2,6 +2,8 @@
 import random
 import sys
 import time
+import traceback
+
 import requests
 from bs4 import BeautifulSoup
 from lib import mysql
@@ -109,15 +111,12 @@ class Collect_58:
     def print_exception(self, name, e, sec=0):
         if sec != 0:
             time.sleep(3)
+        traceback.print_exc()
         print name + '----------------error'
         print e
 
     def collect(self):
         self.config = self.configs
-        time.sleep(random.randint(1, 3))
-
-        print self.config
-        return
 
         self.config = self.configs
         url = 'http://' + self.config['city_jp'] + '.' + self.url_base + "/" + self.config["category_qp"] + "/?" + \
@@ -140,9 +139,7 @@ class Collect_58:
                     break
 
         counties = self.get_area(r.text)
-        print("所有地区：------------------------------------------------------------->")
-        print(counties)
-        time.sleep(2)
+
         for county in counties:
             if url.find(county['url']) == -1:
                 self.config['county'] = county['name']
@@ -227,8 +224,10 @@ class Collect_58:
 
         try:
             region = soup.find(id="infolist")
-            if region.find_all(id="jingzhun"):
+            try:
                 region.find_all(id="jingzhun").decompose()
+            except Exception:
+                pass
 
             dl_all = region.find_all("dl")
 
@@ -273,7 +272,8 @@ class Collect_58:
             if qy_exist_num == 0:
                 shop_info = self.shop_info(qy_link)
                 for info in shop_info:
-                    shop_info[info] = shop_info[info].strip()
+                    if shop_info[info] != '' and shop_info[info] != None:
+                        shop_info[info] = shop_info[info].strip()
                 affrows_shop_detail = self.insert_shop_detail(shop_info)
 
         except Exception, e:
@@ -282,10 +282,12 @@ class Collect_58:
     # 企业网站，信息收集
     def shop_info(self, qy_link):
 
+        print '链接详情页--企业链接--->' + qy_link
         shop_info = {"qy_link": qy_link,
                      "name": self.qy_name,
                      "city": self.config['city'],
                      "area": self.config['county'],
+                     "category": self.config['category'],
                      "contact": "",
                      "email": "",
                      "phone1": "",
@@ -316,6 +318,18 @@ class Collect_58:
             div_node = div_node.find("div", attrs={'class': 'mod-box'})
             li_node = div_node.find_all('li')
             li_node[1].span.span.decompose()
+            for li in li_node:
+                print li
+                print li.find(text="")
+                soup.find_all(text="Elsie")
+                # [u'Elsie']
+
+                soup.find_all(text=["Tillie", "Elsie", "Lacie"])
+                # [u'Elsie', u'Lacie', u'Tillie']
+
+                soup.find_all(text=re.compile("Dormouse"))
+                [u"The Dormouse's story", u"The Dormouse's story"]
+                li_string = li.string
             shop_info['contact'] = li_node[1].span.string
             shop_info['email'] = li_node[2].span.string
             shop_info['phone1'] = li_node[3].span.string

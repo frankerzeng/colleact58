@@ -34,17 +34,14 @@ class consumer_hair(threading.Thread):
 def start(num=1):
     for ii in range(num):
         c = consumer_hair(ii)
-        print 1000
         c.start()
 
 
 def queue(param):
     while True:
-        if q.qsize() > 10:
-            print 11
+        if q.qsize() > 15:
             time.sleep(10)
         else:
-            print 22
             q.put(param)
             break
 
