@@ -15,8 +15,10 @@ DROP TABLE IF EXISTS shop_detail;
 CREATE TABLE `shop_detail`(
     `ID` bigint(11) unsigned NOT NULL AUTO_INCREMENT,
     `city` varchar(255) DEFAULT "" COMMENT "城市",
+    `city_jp` varchar(255) DEFAULT "" COMMENT "城市简拼",
     `area` varchar(255) DEFAULT "" COMMENT "区域",
     `category` varchar(255) DEFAULT "" COMMENT "职位",
+    `category_qp` varchar(255) DEFAULT "" COMMENT "职位全拼",
     `name` varchar(255) DEFAULT "" COMMENT "商家名称",
     `contact` varchar(100) DEFAULT "" COMMENT "联系人",
     `email` varchar(100) DEFAULT "" COMMENT "电子邮箱",

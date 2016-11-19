@@ -1,15 +1,6 @@
 from time import localtime
 
 
-def printtimr(str):
-    print str
-    return
+qy_link = 'sdfsdfsdfg/sdfsd/'
+print qy_link[len(qy_link) -1:]
 
-
-printtimr((1, 23, 3, 4))
-
-dirvar = dir(dir())
-print dirvar
-
-str = raw_input("qingshuru: ")
-print "nin suru de shi ", str

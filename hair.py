@@ -200,8 +200,8 @@ class Collect_58:
                     counties.append({"name": name, "url": href})  # "code":code})
         except Exception, e:
             counties = {}
-            print("counties is empty!")
-            print(e)
+            self.print_exception(sys._getframe().f_code.co_name, e)
+
         return counties
 
     def has_next_page(self, text):
@@ -274,13 +274,19 @@ class Collect_58:
                 qy_link = soup.find('tr', attrs={"class": "tr_l6"}).find('td', attrs={"class": "td_c3"}).a.attrs['href']
                 flag = False
             except Exception, ee:
+                print '链接详情页出错------->' + link
                 self.print_exception(sys._getframe().f_code.co_name, ee, 0)
             if flag:
+                print '链接详情页出错------->' + link
                 self.print_exception(sys._getframe().f_code.co_name, e, 0)
 
         affrows = self.update_list_link({"link": self.list_link}, {"qy_link": qy_link})
+
         qy_exist_num = self.query_shop_detail(
-            'select * from ' + self.dao_shop_detail_instance.tb + ' where qy_link="' + qy_link + '"')
+            'SELECT * FROM ' + self.dao_shop_detail_instance.tb + ' WHERE qy_link="' + qy_link + '" AND city_jp = "' +
+            self.config['city_jp'] + '"' + ' AND area = "' + self.config['county'] + '"' + ' AND category = "' +
+            self.config['category_qp'] + '"')
+
         if qy_exist_num == 0:
             shop_info = self.shop_info(qy_link)
             for info in shop_info:
@@ -291,12 +297,13 @@ class Collect_58:
     # 企业网站，信息收集
     def shop_info(self, qy_link):
 
-        print '链接详情页--企业链接--->' + qy_link
         shop_info = {"qy_link": qy_link,
                      "name": self.qy_name,
                      "city": self.config['city'],
+                     "city_jp": self.config['city_jp'],
                      "area": self.config['county'],
                      "category": self.config['category'],
+                     "category_qp": self.config['category_qp'],
                      "contact": "",
                      "email": "",
                      "phone1": "",
@@ -310,6 +317,8 @@ class Collect_58:
         if qy_link.find('.5858.com') == -1 and qy_link.find('qy.58.com') == -1:
             return shop_info
 
+        print '链接详情页--企业链接--->' + qy_link
+
         r = {"text": ''}
         times = 0
         while True:
@@ -321,7 +330,7 @@ class Collect_58:
                 else:
                     break
             except Exception, e:
-                self.print_exception(sys._getframe().f_code.co_name, e)
+                print e
                 if times == 3:
                     break
 
@@ -329,6 +338,7 @@ class Collect_58:
         # http://t5838318501786625.5858.com/
         try:
             div_node = soup.find(id='first-zone')
+            div_node = div_node.find('article', attrs={"class": "m-contact-a"})
             div_node = div_node.find("div", attrs={'class': 'mod-box'})
             li_node = div_node.find_all('li')
             li_node[1].span.span.decompose()
@@ -370,8 +380,63 @@ class Collect_58:
                 shop_info['addr'] = li_node[7].var.string
 
                 return shop_info
-            except Exception, e:
-                self.print_exception(sys._getframe().f_code.co_name, e, 0)
+            except Exception, ee:
+                # http://qy.58.com/mq/40957708970514
+                try:
+                    shop_info['phone1'] = \
+                        soup.find('tr', attrs={"class": "tr_l4"}).find('td', attrs={"class": "td_c3"}).find_all('img')[
+                            0].attrs['src']
+                    shop_info['contact'] = \
+                        soup.find('tr', attrs={"class": "tr_l4"}).find('td', attrs={"class": "td_c2"}).string
+                    shop_info['addr'] = \
+                        soup.find('tr', attrs={"class": "tr_l6"}).find('td', attrs={"class": "td_c1"}).span.sting
+                    return shop_info
+                except Exception, eee:
+                    # http://t5842635305146885.5858.com/
+                    try:
+                        div_node = soup.find(id='third-zone')
+                        div_node = div_node.find('article', attrs={"class": "m-contact-a"})
+                        div_node = div_node.find("div", attrs={'class': 'mod-box'})
+                        li_node = div_node.find_all('li')
+                        li_node[1].span.span.decompose()
+                        flag = True
+                        for li in li_node:
+                            if li.find(text="联  系  人："):
+                                shop_info['contact'] = li.span.string
+                            if li.find(text="电子邮箱："):
+                                shop_info['email'] = li.span.string
+                            if li.find(text="联系电话："):
+                                if flag:
+                                    shop_info['phone1'] = li.span.string
+                                    flag = False
+                                else:
+                                    shop_info['phone2'] = li.span.string
+                            if li.find(text="Q          Q："):
+                                shop_info['qq'] = li.span.string
+                            if li.find(text="联系地址："):
+                                shop_info['contact'] = li.span.string
+                            if li.find(text="服务区域："):
+                                shop_info['service_area'] = li.span.string
+                            if li.find(text="联系地址："):
+                                shop_info['addr'] = li.span.string
+
+                        return shop_info
+                    except Exception, eeee:
+                        # http://t5827951391765510.5858.com/offer/
+                        target = '/offer/'
+                        if qy_link[len(qy_link) - 1:] == '/':
+                            target = 'offer/'
+                        if qy_link.find(target) == -1:
+                            info = self.shop_info(qy_link + '/offer/')
+                            if info['contact'] == '':
+                                print '企业-链接详情页出错------->' + qy_link
+                                self.print_exception(sys._getframe().f_code.co_name, eeee, 0)
+                            return info
+                    print '企业-链接详情页出错------->' + qy_link
+                    self.print_exception(sys._getframe().f_code.co_name, eee, 0)
+                print '企业-链接详情页出错------->' + qy_link
+                self.print_exception(sys._getframe().f_code.co_name, ee, 0)
+            print '企业-链接详情页出错------->' + qy_link
             self.print_exception(sys._getframe().f_code.co_name, e, 0)
 
     def insert_list_link(self, data):
