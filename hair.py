@@ -296,6 +296,11 @@ class Collect_58:
                      "addr": "",
                      "service_area": "",
                      }
+
+        # 不规则网站直接返回
+        if qy_link.find('.5858.com') == -1 and qy_link.find('qy.58.com') == -1:
+            return shop_info
+
         r = {"text": ''}
         times = 0
         while True:
@@ -318,45 +323,46 @@ class Collect_58:
             div_node = div_node.find("div", attrs={'class': 'mod-box'})
             li_node = div_node.find_all('li')
             li_node[1].span.span.decompose()
+            flag = True
             for li in li_node:
-                print li
-                print li.find(text="")
-                soup.find_all(text="Elsie")
-                # [u'Elsie']
+                if li.find(text="联  系  人："):
+                    shop_info['contact'] = li.span.string
+                if li.find(text="电子邮箱："):
+                    shop_info['email'] = li.span.string
+                if li.find(text="联系电话："):
+                    if flag:
+                        shop_info['phone1'] = li.span.string
+                        flag = False
+                    else:
+                        shop_info['phone2'] = li.span.string
+                if li.find(text="Q          Q："):
+                    shop_info['qq'] = li.span.string
+                if li.find(text="联系地址："):
+                    shop_info['contact'] = li.span.string
+                if li.find(text="服务区域："):
+                    shop_info['service_area'] = li.span.string
+                if li.find(text="联系地址："):
+                    shop_info['addr'] = li.span.string
 
-                soup.find_all(text=["Tillie", "Elsie", "Lacie"])
-                # [u'Elsie', u'Lacie', u'Tillie']
-
-                soup.find_all(text=re.compile("Dormouse"))
-                [u"The Dormouse's story", u"The Dormouse's story"]
-                li_string = li.string
-            shop_info['contact'] = li_node[1].span.string
-            shop_info['email'] = li_node[2].span.string
-            shop_info['phone1'] = li_node[3].span.string
-            shop_info['phone2'] = li_node[4].span.string
-            shop_info['qq'] = li_node[5].span.string
-            shop_info['addr'] = li_node[6].span.string
-            shop_info['service_area'] = li_node[7].span.string
             return shop_info
         except Exception, e:
-            self.print_exception(sys._getframe().f_code.co_name, e, 0)
-
-        # http://qy.58.com/19726492508935/
-        try:
-            ul_node = soup.find("ul", attrs={"class": "basicMsgList"})
-            li_node = ul_node.find_all('li')
-
-            li_node[1].span.decompose()
-            li_node[3].span.decompose()
-            shop_info['contact'] = li_node[1].string
+            # http://qy.58.com/19726492508935/
             try:
-                shop_info['phone1'] = li_node[3].img.attrs['src']
-            except:
-                print ''
-            shop_info['addr'] = li_node[7].var.string
+                ul_node = soup.find("ul", attrs={"class": "basicMsgList"})
+                li_node = ul_node.find_all('li')
 
-            return shop_info
-        except Exception, e:
+                li_node[1].span.decompose()
+                li_node[3].span.decompose()
+                shop_info['contact'] = li_node[1].string
+                try:
+                    shop_info['phone1'] = li_node[3].img.attrs['src']
+                except:
+                    print ''
+                shop_info['addr'] = li_node[7].var.string
+
+                return shop_info
+            except Exception, e:
+                self.print_exception(sys._getframe().f_code.co_name, e, 0)
             self.print_exception(sys._getframe().f_code.co_name, e, 0)
 
     def insert_list_link(self, data):
