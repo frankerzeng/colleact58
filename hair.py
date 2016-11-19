@@ -235,9 +235,11 @@ class Collect_58:
                 a_link = dl.find_all("dd")[1].a
                 href_str = a_link.attrs['href']
                 self.qy_name = a_link.string
-
-                affrows = self.insert_list_link(
-                    {'link': href_str, 'country': self.config['county'], 'page': self.page, 'name': self.qy_name})
+                link_num = self.query_list_link_detail(
+                    'select * from ' + self.dao_list_link_instance.tb + ' where link="' + href_str + '"')
+                if link_num == 0:
+                    affrows = self.insert_list_link(
+                        {'link': href_str, 'country': self.config['county'], 'page': self.page, 'name': self.qy_name})
 
                 self.detail_page(href_str)
         except Exception, e:
@@ -262,22 +264,29 @@ class Collect_58:
                     break
         self.list_link = link
         soup = BeautifulSoup(r.text, "html.parser")
+        flag = True
         try:
             ul_node = soup.find("ul", attrs={'class': 'basicMsgList'})
             li_node = ul_node.find_all('li')[5]
             qy_link = li_node.a.attrs['href']
-            affrows = self.update_list_link({"link": self.list_link}, {"qy_link": qy_link})
-            qy_exist_num = self.query_shop_detail(
-                'select * from ' + self.dao_shop_detail_instance.tb + ' where qy_link="' + qy_link + '"')
-            if qy_exist_num == 0:
-                shop_info = self.shop_info(qy_link)
-                for info in shop_info:
-                    if shop_info[info] != '' and shop_info[info] != None:
-                        shop_info[info] = shop_info[info].strip()
-                affrows_shop_detail = self.insert_shop_detail(shop_info)
-
         except Exception, e:
-            self.print_exception(sys._getframe().f_code.co_name, e, 0)
+            try:
+                qy_link = soup.find('tr', attrs={"class": "tr_l6"}).find('td', attrs={"class": "td_c3"}).a.attrs['href']
+                flag = False
+            except Exception, ee:
+                self.print_exception(sys._getframe().f_code.co_name, ee, 0)
+            if flag:
+                self.print_exception(sys._getframe().f_code.co_name, e, 0)
+
+        affrows = self.update_list_link({"link": self.list_link}, {"qy_link": qy_link})
+        qy_exist_num = self.query_shop_detail(
+            'select * from ' + self.dao_shop_detail_instance.tb + ' where qy_link="' + qy_link + '"')
+        if qy_exist_num == 0:
+            shop_info = self.shop_info(qy_link)
+            for info in shop_info:
+                if shop_info[info] != '' and shop_info[info] != None:
+                    shop_info[info] = shop_info[info].strip()
+            affrows_shop_detail = self.insert_shop_detail(shop_info)
 
     # 企业网站，信息收集
     def shop_info(self, qy_link):
@@ -370,6 +379,9 @@ class Collect_58:
 
     def update_list_link(self, condition, data):
         return self.dao_list_link_instance.mdf(condition, data)
+
+    def query_list_link_detail(self, sql, return_rows=False):
+        return self.dao_list_link_instance.query(sql, return_rows)
 
     def query_shop_detail(self, sql, return_rows=False):
         return self.dao_shop_detail_instance.query(sql, return_rows)
