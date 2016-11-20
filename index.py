@@ -4,7 +4,6 @@ import time
 from hair import Collect_58
 from lib import queue_helper
 
-
 categorys = ['faxingshi', 'meifaxuetu', 'xitougong', 'zpmeirongdaoshi', 'meirongshi', 'meirongzhuli',
              'huazhuangshizg',
              'meitishi', 'chongwumr', 'meifadianz', 'meirongguwen', 'xingxiangsheji', 'caizhuangpeixun',
@@ -25,11 +24,11 @@ if __name__ == '__main__':
     # collect_app.dao_shop_detail_instance.query(
     #   'TRUNCATE TABLE shop_detail;TRUNCATE TABLE list_link;TRUNCATE TABLE city;TRUNCATE TABLE category')
 
-    # 收集全国城市
-    collect_app.all_city()
-
     # 收集职位
     collect_app.all_categorys()
+
+    # 收集全国城市
+    collect_app.all_city()
 
     collect_app = Collect_58()
     all_city = collect_app.dao_shop_detail_instance.query('SELECT ID,city,city_jp FROM city WHERE status = 0', True)
@@ -40,7 +39,6 @@ if __name__ == '__main__':
 
     # 所有城市和职位循环
     for city in all_city:
-        collect_app.dao_shop_detail_instance.query('UPDATE city SET status = 1 WHERE id=' + str(city[0]))
         for category in all_category:
             queue_helper.queue(
                 '{"category":"' + category[0] + '","category_name":"' + category[1] + '","city":"' + city[1] +

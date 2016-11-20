@@ -37,6 +37,8 @@ CREATE TABLE `city`(
     `ID` bigint(11) unsigned NOT NULL AUTO_INCREMENT,
     `city` varchar(255) DEFAULT "" COMMENT "城市",
     `city_jp` varchar(255) DEFAULT "" COMMENT "城市简拼",
+    `category` varchar(255) DEFAULT "" COMMENT "职位拼音",
+    `category_name` varchar(255) DEFAULT "" COMMENT "职位名",
     `status` tinyint(3) DEFAULT 0 COMMENT "状态0：未采集，1：已采集",
     PRIMARY KEY (`ID`)
 )COMMENT "全部城市";

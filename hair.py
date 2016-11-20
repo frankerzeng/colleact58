@@ -62,6 +62,9 @@ class Collect_58:
             except Exception, e:
                 self.print_exception(sys._getframe().f_code.co_name, e)
 
+        # 所有职位
+        categorys = self.dao_category_instance.query('SELECT ID,category,category_name FROM category', True)
+
         # 莫名的乱码
         soup = BeautifulSoup(r.text.decode('UTF-8').encode(r.encoding), "html.parser")
         try:
@@ -74,7 +77,9 @@ class Collect_58:
                 for a in aa:
                     jp = a.attrs['href'][a.attrs['href'].find('://') + 3:a.attrs['href'].find('.58.com')]
                     city = a.string
-                    num = num + self.insert_city({'city_jp': jp, 'city': city})
+                    for category in categorys:
+                        num = num + self.insert_city(
+                            {'city_jp': jp, 'city': city, 'category': category[1], 'category_name': category[2]})
             print "全国城市" + str(num)
         except Exception, e:
             self.print_exception(sys._getframe().f_code.co_name, e)
@@ -144,6 +149,10 @@ class Collect_58:
             if url.find(county['url']) == -1:
                 self.config['county'] = county['name']
                 self.collect_url_by_area(county)
+
+        # 标记已完成
+        self.dao_city_instance.query('UPDATE city SET status = 1 WHERE category=' + self.config["category_qp"] +
+                                     ' AND city_jp =' + self.config["city_jp"])
 
     # 按地区分页
     def collect_url_by_area(self, county):
