@@ -28,9 +28,13 @@ class Dao:
         values_fields = values_fields[1:]
 
         sql = "insert into " + self.tb + "(" + fields + ") values(" + values_fields + ")"
-        n = self.cursor.execute(sql, values)
-
-        return n
+        try:
+            n = self.cursor.execute(sql, values)
+            return n
+        except Exception, e:
+            print e
+            print sql
+            print values
 
     def mdf(self, condition, data):
         fields = ''
@@ -66,8 +70,12 @@ class Dao:
         print n
 
     def query(self, sql, return_rows=False):
-        num = self.cursor.execute(sql)
-        if return_rows:
-            return self.cursor.fetchall()
-        else:
-            return num
+        try:
+            num = self.cursor.execute(sql)
+            if return_rows:
+                return self.cursor.fetchall()
+            else:
+                return num
+        except Exception, e:
+            print e
+            print sql

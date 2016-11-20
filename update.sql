@@ -50,3 +50,12 @@ CREATE TABLE `category`(
     `category_name` varchar(255) DEFAULT "" COMMENT "职位中文名",
     PRIMARY KEY (`ID`)
 )COMMENT "全部职位";
+
+DROP TABLE IF EXISTS `count_data`;
+CREATE TABLE `count_data`(
+    `ID` bigint(11) unsigned NOT NULL AUTO_INCREMENT,
+    `num` bigint(11) unsigned NOT NULL DEFAULT 0 COMMENT "总数",
+    `num_add` bigint(11) unsigned NOT NULL DEFAULT 0 COMMENT "增加数",
+    `create_time` bigint(11) unsigned NOT NULL DEFAULT 0 COMMENT "更新时间",
+    PRIMARY KEY (`ID`)
+)COMMENT "统计";
