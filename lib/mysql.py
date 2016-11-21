@@ -57,15 +57,10 @@ class Dao:
         return n
 
     def delete(self, condition):
+        # todo
         sql = ''
         sql = "delete from user where name=%s"
         param = ("ted")
-        n = self.cursor.execute(sql, param)
-        print n
-
-    def update(self, con):
-        sql = "update user set name=%s where Id=9001"
-        param = ("ken")
         n = self.cursor.execute(sql, param)
         print n
 
