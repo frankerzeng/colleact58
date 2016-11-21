@@ -37,9 +37,6 @@ CREATE TABLE `city`(
     `ID` bigint(11) unsigned NOT NULL AUTO_INCREMENT,
     `city` varchar(255) DEFAULT "" COMMENT "城市",
     `city_jp` varchar(255) DEFAULT "" COMMENT "城市简拼",
-    `category` varchar(255) DEFAULT "" COMMENT "职位拼音",
-    `category_name` varchar(255) DEFAULT "" COMMENT "职位名",
-    `status` tinyint(3) DEFAULT 0 COMMENT "状态0：未采集，1：已采集",
     PRIMARY KEY (`ID`)
 )COMMENT "全部城市";
 
@@ -59,3 +56,15 @@ CREATE TABLE `count_data`(
     `create_time` bigint(11) unsigned NOT NULL DEFAULT 0 COMMENT "更新时间",
     PRIMARY KEY (`ID`)
 )COMMENT "统计";
+
+DROP TABLE IF EXISTS `count_process`;
+CREATE TABLE `count_process`(
+    `ID` bigint(11) unsigned NOT NULL AUTO_INCREMENT,
+    `city` varchar(255) DEFAULT "" COMMENT "城市",
+    `city_jp` varchar(255) DEFAULT "" COMMENT "城市简拼",
+    `category` varchar(255) DEFAULT "" COMMENT "职位",
+    `category_name` varchar(255) DEFAULT "" COMMENT "职位中文名",
+    `area` varchar(255) DEFAULT "" COMMENT "区域",
+    `status` tinyint(3) DEFAULT 0 COMMENT "状态0：未采集，1：已采集",
+    PRIMARY KEY (`ID`)
+)COMMENT "进度";

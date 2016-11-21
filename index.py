@@ -31,11 +31,11 @@ if __name__ == '__main__':
     collect_app.all_city()
 
     collect_app = Collect_58()
-    all_city = collect_app.dao_shop_detail_instance.query('SELECT ID,city,city_jp FROM city WHERE status = 0', True)
+    all_city = collect_app.dao_shop_detail_instance.query('SELECT ID,city,city_jp FROM city', True)
     all_category = collect_app.dao_shop_detail_instance.query('SELECT category,category_name FROM category', True)
 
-    # 开始队列 2个
-    queue_helper.start(5)
+    # 开始队列 2个消费者
+    queue_helper.start(1)
 
     # 所有城市和职位循环
     for city in all_city:

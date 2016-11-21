@@ -6,7 +6,7 @@ class Dao:
     cursor = ''
     tb = ''
 
-    def __init__(self, host, user, pwd, db, tb=''):
+    def __init__(self, tb, db='py58', host='localhost', user='root', pwd='root'):
         self.conn = MySQLdb.connect(host=host, user=user, passwd=pwd, db=db, charset='utf8')
         self.cursor = self.conn.cursor()
         self.tb = tb

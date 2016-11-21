@@ -23,7 +23,8 @@ class consumer_hair(threading.Thread):
                 collect_class = Collect_58()
                 collect_class.configs = {"city": hjson['city'], 'city_jp': hjson['city_jp'],
                                          'category': hjson['category_name'], 'category_qp': hjson['category']}
-
+                print '==================start new queue==================='
+                print collect_class.configs
                 eval('collect_class.collect')()
                 print self.name + ' ' + 'consumer1' + 'collect_class.collect' + ' ' + 'Queue Size:' + str(q.qsize())
                 print collect_class.configs
@@ -42,6 +43,8 @@ def queue(param):
         if q.qsize() > 15:
             time.sleep(10)
         else:
+            print '==================put new queue==================='
+            print param
             q.put(param)
             break
 

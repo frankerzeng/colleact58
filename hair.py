@@ -11,13 +11,13 @@ from lib import mysql
 
 class Collect_58:
     def __init__(self):
-        self.dao_list_link_instance = mysql.Dao("localhost", "root", "root", "py58", 'list_link')
-        self.dao_shop_detail_instance = mysql.Dao("localhost", "root", "root", "py58", 'shop_detail')
-        self.dao_city_instance = mysql.Dao("localhost", "root", "root", "py58", 'city')
-        self.dao_category_instance = mysql.Dao("localhost", "root", "root", "py58", 'category')
+        self.dao_list_link_instance = mysql.Dao('list_link')
+        self.dao_shop_detail_instance = mysql.Dao('shop_detail')
+        self.dao_city_instance = mysql.Dao('city')
+        self.dao_category_instance = mysql.Dao('category')
+        self.dao_count_process_instance = mysql.Dao('count_process')
         reload(sys)
         sys.setdefaultencoding('utf8')
-        pass
 
     headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                'Accept-Encoding': 'gzip, deflate, sdch',
@@ -36,6 +36,7 @@ class Collect_58:
     dao_shop_detail_instance = ''
     dao_city_instance = ''
     dao_category_instance = ''
+    dao_count_process_instance = ''
 
     configs = {"provice": "福建", "city": "福州", "city_jp": 'fz', "category": "发型师", "category_qp": 'faxingshi'}
     config = {}
@@ -62,9 +63,6 @@ class Collect_58:
             except Exception, e:
                 self.print_exception(sys._getframe().f_code.co_name, e)
 
-        # 所有职位
-        categorys = self.dao_category_instance.query('SELECT ID,category,category_name FROM category', True)
-
         # 莫名的乱码
         soup = BeautifulSoup(r.text.decode('UTF-8').encode(r.encoding), "html.parser")
         try:
@@ -77,9 +75,7 @@ class Collect_58:
                 for a in aa:
                     jp = a.attrs['href'][a.attrs['href'].find('://') + 3:a.attrs['href'].find('.58.com')]
                     city = a.string
-                    for category in categorys:
-                        num = num + self.insert_city(
-                            {'city_jp': jp, 'city': city, 'category': category[1], 'category_name': category[2]})
+                    num = num + self.insert_city({'city_jp': jp, 'city': city})
             print "全国城市" + str(num)
         except Exception, e:
             self.print_exception(sys._getframe().f_code.co_name, e)
@@ -116,9 +112,8 @@ class Collect_58:
     def print_exception(self, name, e, sec=0):
         if sec != 0:
             time.sleep(3)
-        traceback.print_exc()
         print name + '----------------error'
-        print e
+        traceback.print_exc()
 
     def collect(self):
         self.config = self.configs
@@ -147,12 +142,19 @@ class Collect_58:
 
         for county in counties:
             if url.find(county['url']) == -1:
+                self.dao_count_process_instance.add(
+                    {"city": self.config['city'], "city_jp": self.config['city_jp'], "area": county['name'],
+                     "category": self.config['category_qp'], "category_name": self.config['category']})
+
+        for county in counties:
+            if url.find(county['url']) == -1:
                 self.config['county'] = county['name']
                 self.collect_url_by_area(county)
 
-        # 标记已完成
-        self.dao_city_instance.query('UPDATE city SET status = 1 WHERE category=' + self.config["category_qp"] +
-                                     ' AND city_jp =' + self.config["city_jp"])
+                # 标记已完成
+                self.dao_count_process_instance.query(
+                    'UPDATE count_process SET status = 1 WHERE category="' + self.config["category_qp"] +
+                    '" AND city_jp ="' + self.config["city_jp"] + '" AND area ="' + str(county['name']) + '"')
 
     # 按地区分页
     def collect_url_by_area(self, county):
@@ -162,6 +164,9 @@ class Collect_58:
             url = county['url']
 
         print '按地区分页采集------->' + url
+
+        if url.find('http://') == -1:
+            return
 
         # 是否有下一页
         flag = True
@@ -219,7 +224,7 @@ class Collect_58:
         try:
             region = soup.find("div", attrs={'class': 'pagerout'})
             next_page = region.find("a", attrs={'class': 'next'})
-            if next_page:
+            if next_page and next_page.attrs['href'] != 'null':
                 counties = True
         except Exception, e:
             counties = False
@@ -256,9 +261,14 @@ class Collect_58:
 
     # 列表链接的详情页
     def detail_page(self, link):
+        if link.find('http://') == -1:
+            return
+
+        print '链接详情页------->' + link
+
         r = {"text": ""}
         times = 0
-        print '链接详情页------->' + link
+
         while True:
             times += 1
             try:
@@ -274,6 +284,7 @@ class Collect_58:
         self.list_link = link
         soup = BeautifulSoup(r.text, "html.parser")
         flag = True
+        qy_link = ''
         try:
             ul_node = soup.find("ul", attrs={'class': 'basicMsgList'})
             li_node = ul_node.find_all('li')[5]
@@ -385,7 +396,7 @@ class Collect_58:
                 try:
                     shop_info['phone1'] = li_node[3].img.attrs['src']
                 except:
-                    print ''
+                    pass
                 shop_info['addr'] = li_node[7].var.string
 
                 return shop_info
