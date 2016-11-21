@@ -35,7 +35,7 @@ if __name__ == '__main__':
     all_category = collect_app.dao_shop_detail_instance.query('SELECT category,category_name FROM category', True)
 
     # 开始队列 2个消费者
-    queue_helper.start(1)
+    queue_helper.start(num=10)
 
     # 所有城市和职位循环
     for city in all_city:
