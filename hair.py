@@ -6,16 +6,16 @@ import traceback
 
 import requests
 from bs4 import BeautifulSoup
-from lib import mysql
+from lib.mysql import Dao
 
 
 class Collect_58:
     def __init__(self):
-        self.dao_list_link_instance = mysql.Dao('list_link')
-        self.dao_shop_detail_instance = mysql.Dao('shop_detail')
-        self.dao_city_instance = mysql.Dao('city')
-        self.dao_category_instance = mysql.Dao('category')
-        self.dao_count_process_instance = mysql.Dao('count_process')
+        self.dao_list_link_instance = Dao('list_link')
+        self.dao_shop_detail_instance = Dao('shop_detail')
+        self.dao_city_instance = Dao('city')
+        self.dao_category_instance = Dao('category')
+        self.dao_count_process_instance = Dao('`count_process`')
         reload(sys)
         sys.setdefaultencoding('utf8')
 
@@ -358,15 +358,15 @@ class Collect_58:
         try:
             div_node = soup.find(id='first-zone')
             # http://t5838318501786625.5858.com/
-            div_node = div_node.find('article', attrs={"class": "m-contact-a"})
-            if div_node is None:
+            article_node = div_node.find('article', attrs={"class": "m-contact-a"})
+            if article_node is None:
                 # http://qdzhuohang.5858.com/
-                div_node = div_node.find('article', attrs={"class": "m-contact-b"})
-                if div_node is None:
+                article_node = div_node.find('article', attrs={"class": "m-contact-b"})
+                if article_node is None:
                     # http://t5833722542081824.5858.com/
-                    div_node = div_node.find('article', attrs={"class": "m-contact-d"})
+                    article_node = div_node.find('article', attrs={"class": "m-contact-d"})
 
-            div_node = div_node.find("div", attrs={'class': 'mod-box'})
+            div_node = article_node.find("div", attrs={'class': 'mod-box'})
             li_node = div_node.find_all('li')
             li_node[1].span.span.decompose()
             flag = True
@@ -422,8 +422,13 @@ class Collect_58:
                     # http://t5842635305146885.5858.com/
                     try:
                         div_node = soup.find(id='second-zone')
-                        div_node = div_node.find('article', attrs={"class": "m-contact-b"})
-                        div_node = div_node.find("div", attrs={'class': 'mod-box'})
+                        # http://qdzhuohang.5858.com/
+                        article_node = div_node.find('article', attrs={"class": "m-contact-b"})
+                        if article_node is None:
+                            # http://t5830953136351522.5858.com/contactus/
+                            article_node = div_node.find('article', attrs={"class": "m-contact-c"})
+
+                        div_node = article_node.find("div", attrs={'class': 'mod-box'})
                         li_node = div_node.find_all('li')
                         li_node[1].span.span.decompose()
                         flag = True
@@ -479,16 +484,54 @@ class Collect_58:
 
                             return shop_info
                         except Exception, eeeee:
-                            # http://t5827951391765510.5858.com/offer/
-                            target = '/offer/'
-                            if qy_link[len(qy_link) - 1:] == '/':
-                                target = 'offer/'
-                            if qy_link.find(target) == -1:
-                                info = self.shop_info(qy_link + '/offer/')
-                                if info['contact'] == '':
-                                    print '企业-链接详情页出错------->' + qy_link
-                                    self.print_exception(sys._getframe().f_code.co_name, eeeee, 0)
-                                return info
+                            # http://muqingtangquan.5858.com/
+                            try:
+                                div_node = soup.find(id='first-zone')
+                                div_node = div_node.find('article', attrs={"class": "m-pictext-a"})[1]
+                                div_node = div_node.find("div", attrs={'class': 'mod-box'})
+                                li_node = div_node.find_all('div')
+                                for li in li_node:
+                                    li = li.span.span
+                                    if li is None:
+                                        continue
+                                    if li.string.find('联  系  人：') > -1:
+                                        shop_info['contact'] = li.string[li.string.find('：') + 1:]
+                                    if li.string.find("邮箱：") > -1:
+                                        shop_info['email'] = li.string[li.string.find('：') + 1:]
+                                    if li.string.find("座　　机：") > -1:
+                                        shop_info['phone1'] = li.string[li.string.find('：') + 1:]
+                                    if li.string.find("联系地址：") > -1:
+                                        shop_info['addr'] = li.string[li.string.find('：') + 1:]
+                                return shop_info
+                            except Exception, eeeeee:
+                                # http://t5827951391765510.5858.com/offer/
+                                # http://t5830953136351522.5858.com/contactus/
+                                target = '/offer/'
+                                target1 = '/contactus/'
+                                if qy_link[len(qy_link) - 1:] == '/':
+                                    target = 'offer/'
+                                    target1 = 'contactus/'
+
+                                if qy_link.find(target) == -1 and qy_link.find(target1) == -1:
+                                    try:
+                                        info = self.shop_info(qy_link + target)
+                                        if info['contact'] != '':
+                                            return info
+                                    except Exception, e:
+                                        pass
+
+                                if qy_link.find(target) == -1 and qy_link.find(target1) == -1:
+                                    try:
+                                        info = self.shop_info(qy_link + target1)
+                                        if info['contact'] != '':
+                                            return info
+                                    except Exception, e:
+                                        pass
+
+                                print '企业-链接详情页出错------->' + qy_link
+                                self.print_exception(sys._getframe().f_code.co_name, eeeeee, 0)
+                            print '企业-链接详情页出错------->' + qy_link
+                            self.print_exception(sys._getframe().f_code.co_name, eeeee, 0)
                         print '企业-链接详情页出错------->' + qy_link
                         self.print_exception(sys._getframe().f_code.co_name, eeee, 0)
                     print '企业-链接详情页出错------->' + qy_link
@@ -523,6 +566,6 @@ class Collect_58:
         return self.dao_category_instance.add(data)
 
 
-if __name__ == '__name__':
+if __name__ == '__main__':
     collect_app = Collect_58()
     collect_app.collect()

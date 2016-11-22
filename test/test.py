@@ -1,3 +1,6 @@
+# -*- coding:utf-8 -*-
+import re
+import traceback
 from time import localtime, time
 import requests
 from bs4 import BeautifulSoup
@@ -33,22 +36,44 @@ except Exception, e:
 
 while True:
     try:
-        r = requests.get('http://qdzhuohang.5858.com/')
+        r = requests.get('http://muqingtangquan.5858.com/')
         if r.status_code == 502:
             time.sleep(5)
         else:
             break
     except Exception, e:
-        print e
-
+        traceback.print_exc()
+# print r.text
 soup = BeautifulSoup(r.text, "html.parser")
 # http://t5838318501786625.5858.com/
-try:
-    div_node = soup.find(id='first-zone')
-    if div_node.find('article', attrs={"class": "m-contact-a"}) is None:
-        div_node = div_node.find('article', attrs={"class": "m-contact-b"})
-        print div_node
+# try:
+#     # http://muqingtangquan.5858.com/
+#     shop_info = {"contact":''}
+#     div_node = soup.find(id='first-zone')
+#     div_node = div_node.find_all('article', attrs={"class": "m-pictext-a"})[1]
+#     div_node = div_node.find("div", attrs={'class': 'mod-box'})
+#     li_node = div_node.find_all('div')
+#     for li in li_node:
+#         li = li.span.span
+#         if li is None:
+#             continue
+#         if li.string.find('联  系  人：') > -1:
+#             shop_info['contact'] = li.string[li.string.find('：')+1:]
+#             print 3
+#         if li.string.find("邮箱：") > -1:
+#             shop_info['email'] = li.string[li.string.find('：')+1:]
+#             print 4
+#         if li.string.find("座　　机：") > -1:
+#             shop_info['phone1'] = li.string[li.string.find('：')+1:]
+#             print 5
+#         if li.string.find("联系地址：") > -1:
+#             shop_info['addr'] = li.string[li.string.find('：')+1:]
+#
+#     print shop_info
+# except Exception, e:
+#     print e
 
-        pass
-except Exception, e:
-    print e
+collect = Collect_58()
+collect.config = {'category_qp': 'meitishi', 'city': 'd', 'city_jp': 'city_jp', "county": "county",
+                  "category": "category"}
+print collect.shop_info('http://t5830953136351522.5858.com/')

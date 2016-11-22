@@ -1,8 +1,13 @@
 # -*- coding:utf-8 -*-
-import time
+import sys
 
+import time
+import traceback
+
+import count
 from hair import Collect_58
 from lib import queue_helper
+from lib.mysql import Dao
 
 categorys = ['faxingshi', 'meifaxuetu', 'xitougong', 'zpmeirongdaoshi', 'meirongshi', 'meirongzhuli',
              'huazhuangshizg',
@@ -17,6 +22,9 @@ if __name__ == '__main__':
     try:
         all_the_text = file_object.read()
         collect_app.dao_shop_detail_instance.query(all_the_text)
+        time.sleep(2)
+    except Exception, e:
+        traceback.print_exc()
     finally:
         file_object.close()
 
@@ -30,9 +38,11 @@ if __name__ == '__main__':
     # 收集全国城市
     collect_app.all_city()
 
-    collect_app = Collect_58()
-    all_city = collect_app.dao_shop_detail_instance.query('SELECT ID,city,city_jp FROM city', True)
-    all_category = collect_app.dao_shop_detail_instance.query('SELECT category,category_name FROM category', True)
+    all_city = Dao('city').query('SELECT ID,city,city_jp FROM city', True)
+    all_category = Dao('category').query('SELECT category,category_name FROM category', True)
+
+    # 开始统计
+    count.start()
 
     # 开始队列 2个消费者
     queue_helper.start(num=10)
